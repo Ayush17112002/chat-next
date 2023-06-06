@@ -1,5 +1,4 @@
 "use client";
-
 import { onSnapshot, query, collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { useState, useEffect } from "react";
@@ -16,7 +15,7 @@ export default function SideBar({ setReceiver }) {
           });
           setUsers(list);
         });
-        return () => getAllUsers;
+        return () => getAllUsers();
       } catch (err) {
         console.log(err);
       }
@@ -27,7 +26,7 @@ export default function SideBar({ setReceiver }) {
     <div className="bg-white col-span-2 h-[calc(100vh_-_8rem)]">
       {users.map((user) => {
         const data = user.data();
-        if (data.name !== "Ayush" && data.type === "recruiter")
+        if (data.type === "applicant")
           return (
             <button
               onClick={setReceiver}

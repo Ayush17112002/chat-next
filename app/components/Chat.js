@@ -4,58 +4,67 @@ import {
   collection,
   addDoc,
   where,
-  or,
-  and,
   orderBy,
   limit,
   onSnapshot,
   getDocs,
   getDoc,
   doc,
-  QuerySnapshot,
   serverTimestamp,
   updateDoc,
-  Timestamp,
 } from "firebase/firestore";
+import { recruiter } from "../dummy/users";
 import { useRef, useState, useEffect } from "react";
+
+const me = recruiter[0];
+
 export default function Chat({ receiverId }) {
   const text = useRef("");
   const [messages, setMessages] = useState([]);
   const [chatId, setChatId] = useState(null);
   const [file, setFile] = useState(null);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [receiver, setReceiver] = useState(null);
 
   useEffect(() => {
+    let unsubscribe = () => {};
     const fetchMessages = async () => {
-      let messages;
       try {
         if (!receiverId) {
           throw new Error("receiver not vaild");
         }
+        const receiver = await getReceiver();
+        setReceiver(() => receiver);
         const sender = await getSender();
-        console.log(sender);
         if (!sender) {
           throw new Error("sender not found");
         }
-        console.log(sender.data());
-        const chatId = sender.data().chatsWith[receiverId];
+        let chatId = sender.data().chatsWith[receiverId];
         console.log(chatId);
         if (chatId === undefined) {
+          setChatId(() => null);
           throw new Error("chat id not found");
         }
         setChatId(() => chatId);
-        messages = onSnapshot(
+        unsubscribe = onSnapshot(
           query(
             collection(db, "chats/" + chatId + "/messages"),
-            orderBy("createdAt"),
-            limit(50)
+            orderBy("createdAt", "desc"),
+            limit(20)
           ),
-          (querySnapshot) => {
+          async (querySnapshot) => {
             let list = [];
             querySnapshot.forEach((message) => {
-              console.log(message);
               list.push(message);
             });
-            setMessages(list);
+            list.reverse();
+            if (
+              list.length > 0 &&
+              (receiverId === list[0].data().from ||
+                list[0].data().from === sender.id)
+            ) {
+              setMessages(list);
+            }
           }
         );
       } catch (err) {
@@ -63,21 +72,21 @@ export default function Chat({ receiverId }) {
         setChatId(() => null);
         console.log(err);
       }
-      return () => messages;
     };
     fetchMessages();
-  }, [receiverId]);
+
+    return () => unsubscribe();
+  }, [receiverId, chatId]);
 
   const getSender = async () => {
     try {
       let sender = null;
       const getSender = await getDocs(
-        query(collection(db, "users"), where("name", "==", "Ayush"))
+        query(collection(db, "users"), where("email", "==", me.email))
       );
       getSender.forEach((user) => {
         sender = user;
       });
-      console.log(sender, sender.id);
       return sender;
     } catch (err) {
       return null;
@@ -111,16 +120,13 @@ export default function Chat({ receiverId }) {
       }
 
       const sender = await getSender();
-      console.log(sender, newChatId);
       let chatsWith = sender.data().chatsWith;
       chatsWith[receiverId] = newChatId;
-      console.log(chatsWith);
       await updateDoc(doc(db, "users", sender.id), { chatsWith: chatsWith });
 
       const receiver = await getReceiver();
       chatsWith = receiver.data().chatsWith;
       chatsWith[sender.id] = newChatId;
-      console.log(chatsWith);
       await updateDoc(doc(db, "users", receiverId), { chatsWith: chatsWith });
 
       await addDoc(collection(db, "chats/" + newChatId + "/messages"), {
@@ -144,6 +150,7 @@ export default function Chat({ receiverId }) {
     }
     const message = { type: "file", url: file.name };
     await sendMessage(message);
+    setFile(() => null);
   };
   const onSendText = async (e) => {
     e.preventDefault();
@@ -153,39 +160,63 @@ export default function Chat({ receiverId }) {
     }
     const message = { type: "text", text: text.current.value };
     await sendMessage(message);
+    text.current.value = null;
   };
-  const onScheduleMeeting = async (e) => {
-    e.preventDefault();
+  const onScheduleMeeting = async (meet) => {
+    setShowSchedule(() => false);
+    const { topic, agenda, date, startTime, endTime, link } = meet;
     const message = {
       type: "meeting",
-      topic: "FSWD interview",
-      agenda: "none",
-      date: serverTimestamp(),
-      "start time": "",
-      "end time": "",
+      topic,
+      agenda,
+      date,
+      startTime,
+      endTime,
+      link,
     };
     await sendMessage(message);
+  };
+  const onCancelMeeting = () => {
+    setShowSchedule(() => false);
   };
   return (
     <div className=" bg-white relative col-span-3 h-[calc(100vh_-_8rem)]">
       <div className="title flex flex-col items-center border-b-black border-b-2 h-14 w-[calc(((100vw_-_6rem)/5)*3)]">
-        <div className="company-name">Devtown</div>
-        <div className="job-name">Java Developer Job</div>
+        <div className="company-name">
+          {receiver ? receiver.data().name : ""}
+        </div>
       </div>
-      {messages.map((message) => {
-        const data = message.data().message;
-        const display =
-          data.type === "text"
-            ? data.text
-            : data.type === "file"
-            ? data.url
-            : data.topic;
-        return (
-          <div key={message.id} className="w-full h-11 mb-2">
-            {display}
-          </div>
-        );
-      })}
+      <div className="chat-box h-[calc(100vh_-_15rem)] overflow-auto">
+        {messages.map((message) => {
+          const data = message.data().message;
+          const display =
+            data.type === "text"
+              ? data.text
+              : data.type === "file"
+              ? data.url
+              : data.topic;
+          return (
+            <div
+              key={message.id}
+              className={`w-auto mb-2 ${
+                message.data().from === me.id ? "text-right" : "text-left"
+              }`}
+            >
+              {data.type === "meeting" ? (
+                <div className="meeting flex flex-col justify-between bg-slate-400 rounded-lg mb-3">
+                  <div>{data.topic}</div>
+                  <div>{data.agenda}</div>
+                  <div>{data.date}</div>
+                  <div>{data.startTime + "-" + data.endTime}</div>
+                  <a href={data.link}>{data.link}</a>
+                </div>
+              ) : (
+                display
+              )}
+            </div>
+          );
+        })}
+      </div>
       <div className="input-box absolute h-14 border-2 p-0 m-0 bottom-0 right-0.5 left-0.5 bg-slate-200 w-[calc(((100vw_-_6rem)/5)*3)]">
         <input type="text" ref={text} className="w-1/4 h-full"></input>
         <button
@@ -199,10 +230,16 @@ export default function Chat({ receiverId }) {
         <button type="submit" onClick={onSendFile}>
           File Upload
         </button>
-        <button type="submit" onClick={onScheduleMeeting}>
+        <div type="submit" onClick={() => setShowSchedule((prev) => !prev)}>
           Schedule Meeting
-        </button>
+        </div>
       </div>
+      {showSchedule && (
+        <Meeting
+          onScheduleMeeting={onScheduleMeeting}
+          onCancelMeeting={onCancelMeeting}
+        ></Meeting>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import SideBar from "./SideBar";
 export default function Grid() {
   const [receiverId, setReceiverId] = useState(null);
   const handleReceiver = React.useCallback((e) => {
-    console.log(e.target.id);
+    //console.log(e.target.id);
     setReceiverId(() => e.target.id);
   });
   return (
