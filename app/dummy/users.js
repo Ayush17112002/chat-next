@@ -1,5 +1,6 @@
-export const applicant = [
+export const users = [
   {
+    id: "YN7kQTMdKiEqTbNEH1dh",
     name: "Ayush",
     type: "applicant",
     email: "ayush@gmail.com",
@@ -24,8 +25,6 @@ export const applicant = [
     type: "applicant",
     email: "aman@gmail.com",
   },
-];
-export const recruiter = [
   {
     id: "F7m1vYSsAe3RSUA8XFD0",
     name: "Atul",

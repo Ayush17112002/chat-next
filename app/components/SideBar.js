@@ -2,6 +2,8 @@
 import { onSnapshot, query, collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { useState, useEffect } from "react";
+import { users } from "../dummy/users";
+const me = users[5];
 export default function SideBar({ setReceiver }) {
   const [users, setUsers] = useState([]);
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function SideBar({ setReceiver }) {
     <div className="bg-white col-span-2 h-[calc(100vh_-_8rem)]">
       {users.map((user) => {
         const data = user.data();
-        if (data.type === "applicant")
+        if (data.type !== me.type)
           return (
             <button
               onClick={setReceiver}

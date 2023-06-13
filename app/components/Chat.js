@@ -13,10 +13,10 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { recruiter } from "../dummy/users";
+import { users } from "../dummy/users";
 import { useRef, useState, useEffect } from "react";
-
-const me = recruiter[0];
+import Meeting from "./Meeting";
+const me = users[5];
 
 export default function Chat({ receiverId }) {
   const text = useRef("");
@@ -40,7 +40,6 @@ export default function Chat({ receiverId }) {
           throw new Error("sender not found");
         }
         let chatId = sender.data().chatsWith[receiverId];
-        console.log(chatId);
         if (chatId === undefined) {
           setChatId(() => null);
           throw new Error("chat id not found");
@@ -70,7 +69,7 @@ export default function Chat({ receiverId }) {
       } catch (err) {
         setMessages(() => []);
         setChatId(() => null);
-        console.log(err);
+        console.log(err.message);
       }
     };
     fetchMessages();
@@ -136,7 +135,7 @@ export default function Chat({ receiverId }) {
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      console.log(err);
+      console.log(err.message);
     }
   };
   const onFileChange = (e) => {
@@ -151,6 +150,7 @@ export default function Chat({ receiverId }) {
     const message = { type: "file", url: file.name };
     await sendMessage(message);
     setFile(() => null);
+    document.getElementById("file-upload").value = "";
   };
   const onSendText = async (e) => {
     e.preventDefault();
@@ -226,13 +226,15 @@ export default function Chat({ receiverId }) {
         >
           Send
         </button>
-        <input type="file" onChange={onFileChange} />
+        <input type="file" id="file-upload" onChange={onFileChange} />
         <button type="submit" onClick={onSendFile}>
           File Upload
         </button>
-        <div type="submit" onClick={() => setShowSchedule((prev) => !prev)}>
-          Schedule Meeting
-        </div>
+        {me.type === "recruiter" && (
+          <div type="submit" onClick={() => setShowSchedule((prev) => !prev)}>
+            Schedule Meeting
+          </div>
+        )}
       </div>
       {showSchedule && (
         <Meeting
