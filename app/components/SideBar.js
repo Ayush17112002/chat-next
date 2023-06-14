@@ -2,9 +2,7 @@
 import { onSnapshot, query, collection } from "firebase/firestore";
 import { db } from "../firebase";
 import { useState, useEffect } from "react";
-import { users } from "../dummy/users";
-const me = users[5];
-export default function SideBar({ setReceiver }) {
+export default function SideBar({ setReceiver, me }) {
   const [users, setUsers] = useState([]);
   useEffect(() => {
     const fetchUsers = async () => {

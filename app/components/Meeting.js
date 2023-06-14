@@ -1,14 +1,22 @@
 import { useRef } from "react";
-
-export default function Meeting({ onScheduleMeeting, onCancelMeeting }) {
+import sendMessage from "../utils/sendMessage";
+export default function Meeting({
+  me,
+  receiverId,
+  chatId,
+  setChatId,
+  setShowSchedule,
+}) {
   const topic = useRef("");
   const agenda = useRef("");
   const date = useRef(null);
   const startTime = useRef(null);
   const endTime = useRef(null);
-  const scheduleMeet = (e) => {
+
+  const scheduleMeet = async (e) => {
     e.preventDefault();
-    const meet = {
+    const message = {
+      type: "meeting",
       topic: topic.current.value,
       agenda: agenda.current.value,
       date: date.current.value,
@@ -16,10 +24,11 @@ export default function Meeting({ onScheduleMeeting, onCancelMeeting }) {
       endTime: endTime.current.value,
       link: "",
     };
-    onScheduleMeeting(meet);
+    setShowSchedule(() => false);
+    await sendMessage(me, message, receiverId, chatId, setChatId);
   };
   const cancelMeet = (e) => {
-    onCancelMeeting();
+    setShowSchedule(() => false);
   };
   return (
     <div className="meeting fixed border-2 top-1/2 left-1/2 z-10 rounded-md">
